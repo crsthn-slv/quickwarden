@@ -1,13 +1,13 @@
-//! Pinentry do rbw com Touch ID.
+//! rbw pinentry with Touch ID.
 //!
-//! O rbw-agent pede a palavra-passe mestra a um programa pinentry (protocolo Assuan, ver
-//! `src/pinentry.rs` do rbw). Este modo guarda-a no Keychain e responde ao `GETPIN` depois do
-//! Touch ID. Sem inscrição, Touch ID cancelado, ou qualquer pedido que não seja a palavra-passe
-//! mestra → passa tudo ao `pinentry-mac`.
+//! rbw-agent asks a pinentry program for the master password (Assuan protocol, see rbw's
+//! `src/pinentry.rs`). This mode stores it in the Keychain and answers `GETPIN` after
+//! Touch ID. Not enrolled, Touch ID cancelled, or any request that isn't the master
+//! password → everything is passed to `pinentry-mac`.
 //!
-//! Limite conhecido: sem Developer ID não há item com `biometryCurrentSet` (o Keychain
-//! protegido devolve -34018), por isso o item vive no Keychain de sessão, com a ACL presa à
-//! assinatura deste binário, e quem exige o Touch ID é o `LAContext` aqui — não o Keychain.
+//! Known limit: without a Developer ID there is no `biometryCurrentSet` item (the protected
+//! Keychain returns -34018), so the item lives in the login Keychain, with its ACL tied to
+//! this binary's signature, and it is the `LAContext` here that enforces Touch ID, not the Keychain.
 
 use block2::RcBlock;
 use objc2::runtime::Bool;
@@ -21,8 +21,8 @@ const SERVICE: &str = "local.quick-access";
 const ACCOUNT: &str = "rbw-master-password";
 const FALLBACK: &str = "/opt/homebrew/bin/pinentry-mac";
 
-/// Pede a palavra-passe ao pinentry-mac (duas vezes, `SETREPEAT`) e guarda-a. Não precisa de
-/// terminal. Não a valida: se estiver errada, o rbw manda `SETERROR` e cai no pinentry-mac.
+/// Asks pinentry-mac for the password (twice, `SETREPEAT`) and stores it. Needs no
+/// terminal. Doesn't validate it: if wrong, rbw sends `SETERROR` and falls back to pinentry-mac.
 pub fn enroll() -> Result<(), String> {
     let mut child = Command::new(FALLBACK)
         .stdin(Stdio::piped())
@@ -33,7 +33,7 @@ pub fn enroll() -> Result<(), String> {
         let mut stdin = child.stdin.take().expect("stdin piped");
         stdin
             .write_all(
-                b"SETTITLE Quick Access\nSETDESC Palavra-passe mestra do Bitwarden, para desbloquear com Touch ID\nSETPROMPT Master Password\nSETREPEAT Outra vez\nSETREPEATERROR N%C3%A3o coincidem\nGETPIN\n",
+                b"SETTITLE Quick Access\nSETDESC Bitwarden master password, to unlock with Touch ID\nSETPROMPT Master Password\nSETREPEAT Repeat\nSETREPEATERROR Passwords do not match\nGETPIN\n",
             )
             .map_err(|e| e.to_string())?;
     }
@@ -47,7 +47,7 @@ pub fn enroll() -> Result<(), String> {
         }
     }
     let _ = child.wait();
-    let mut pin = pin.filter(|p| !p.is_empty()).ok_or("cancelado")?;
+    let mut pin = pin.filter(|p| !p.is_empty()).ok_or("cancelled")?;
     let r = set_generic_password(SERVICE, ACCOUNT, &pin).map_err(|e| format!("Keychain: {e}"));
     pin.fill(0);
     r
@@ -72,8 +72,8 @@ fn unescape(d: &[u8]) -> Vec<u8> {
     out
 }
 
-/// Só biometria: sem recurso ao código do Mac. Se o Touch ID falhar, quem decide é a
-/// palavra-passe mestra no pinentry-mac.
+/// Biometrics only: no fallback to the Mac passcode. If Touch ID fails, the master
+/// password in pinentry-mac decides.
 fn touch_id(reason: &str) -> bool {
     let (tx, rx) = std::sync::mpsc::channel();
     let reply = RcBlock::new(move |ok: Bool, _: *mut NSError| {
@@ -89,10 +89,10 @@ fn touch_id(reason: &str) -> bool {
     rx.recv().unwrap_or(false)
 }
 
-/// `None` se não houver inscrição ou se o Touch ID não passar.
+/// `None` if not enrolled or Touch ID fails.
 fn read_password() -> Option<Vec<u8>> {
     let pin = get_generic_password(SERVICE, ACCOUNT).ok()?;
-    if touch_id("desbloquear o cofre") {
+    if touch_id("unlock the vault") {
         Some(pin)
     } else {
         let mut pin = pin;
@@ -101,7 +101,7 @@ fn read_password() -> Option<Vec<u8>> {
     }
 }
 
-/// Assuan escapa `%`, CR e LF nas linhas `D`; o rbw descodifica.
+/// Assuan escapes `%`, CR and LF in `D` lines; rbw decodes them.
 fn escape(pin: &[u8]) -> Vec<u8> {
     let mut out = Vec::with_capacity(pin.len());
     for &b in pin {
@@ -120,10 +120,10 @@ pub fn run(args: &[String]) -> io::Result<()> {
     out.write_all(b"OK quick-access\n")?;
     out.flush()?;
 
-    // Comandos já confirmados, para repetir ao pinentry-mac se for preciso.
+    // Commands already acknowledged, to replay to pinentry-mac if needed.
     let mut seen: Vec<String> = Vec::new();
-    // Só a palavra-passe mestra, e nunca depois de um erro: SETERROR significa que a
-    // palavra-passe guardada falhou, e repeti-la seria um ciclo.
+    // Master password only, and never after an error: SETERROR means the stored
+    // password failed, and retrying it would loop.
     let mut biometric = true;
 
     for line in io::stdin().lock().lines() {
@@ -162,8 +162,8 @@ pub fn run(args: &[String]) -> io::Result<()> {
     Ok(())
 }
 
-/// Repete os comandos ao pinentry-mac e reencaminha a resposta ao GETPIN. Os `OK` dele aos
-/// comandos repetidos (mais a saudação) já foram dados por nós, por isso saltam-se.
+/// Replays the commands to pinentry-mac and forwards the GETPIN response. Its `OK`s to the
+/// replayed commands (plus the greeting) were already sent by us, so they are skipped.
 fn fallback(args: &[String], seen: &[String], out: &mut impl Write) -> io::Result<()> {
     let mut child = Command::new(FALLBACK)
         .args(args)
@@ -176,7 +176,7 @@ fn fallback(args: &[String], seen: &[String], out: &mut impl Write) -> io::Resul
             writeln!(stdin, "{line}")?;
         }
         stdin.write_all(b"GETPIN\n")?;
-    } // fecha o stdin: o pinentry-mac sai depois de responder
+    } // closes stdin: pinentry-mac exits after answering
 
     let mut skip = seen.len() + 1;
     for line in BufReader::new(child.stdout.take().expect("stdout piped")).split(b'\n') {

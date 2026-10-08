@@ -1,4 +1,4 @@
-// Partes que só o AppKit faz: área de transferência oculta e bloqueio no sleep/ecrã.
+// Parts only AppKit can do: concealed clipboard and locking on sleep/screen events.
 use block2::RcBlock;
 use objc2_app_kit::{
     NSPasteboard, NSStatusWindowLevel, NSWindow, NSWindowCollectionBehavior, NSPasteboardTypeString, NSWorkspace, NSWorkspaceScreensDidSleepNotification,
@@ -11,9 +11,9 @@ use std::time::Duration;
 
 const CLEAR_AFTER: Duration = Duration::from_secs(45);
 
-/// Marca `org.nspasteboard.ConcealedType` (gestores de histórico decentes não guardam) e
-/// limpa aos 45 s, só se ninguém copiou nada entretanto: o `changeCount` só muda com uma
-/// cópia nova, mais fiável do que comparar o texto.
+/// Marks `org.nspasteboard.ConcealedType` (decent clipboard managers skip it) and clears
+/// after 45 s, only if nothing else was copied meanwhile: `changeCount` only changes on a
+/// new copy, more reliable than comparing the text.
 pub fn copy_concealed(v: &str) {
     let pb = NSPasteboard::generalPasteboard();
     pb.clearContents();
@@ -29,7 +29,7 @@ pub fn copy_concealed(v: &str) {
     });
 }
 
-/// Além do `lock_timeout` do rbw: bloqueia ao adormecer, ao apagar o ecrã e ao bloquear o ecrã.
+/// On top of rbw's `lock_timeout`: lock on sleep, on display sleep and on screen lock.
 pub fn install_lock_observers(app: tauri::AppHandle) {
     let lock = RcBlock::new(move |_: NonNull<NSNotification>| {
         let _ = Command::new(crate::RBW).arg("lock").status();
@@ -38,7 +38,7 @@ pub fn install_lock_observers(app: tauri::AppHandle) {
     unsafe {
         let ws = NSWorkspace::sharedWorkspace().notificationCenter();
         for name in [NSWorkspaceWillSleepNotification, NSWorkspaceScreensDidSleepNotification] {
-            // O centro guarda o observador; o token só serviria para o remover, e nunca removemos.
+            // The center keeps the observer; the token would only be used to remove it, and we never do.
             std::mem::forget(ws.addObserverForName_object_queue_usingBlock(Some(name), None, None, &lock));
         }
         std::mem::forget(
@@ -52,8 +52,8 @@ pub fn install_lock_observers(app: tauri::AppHandle) {
     }
 }
 
-/// Sem `FullScreenAuxiliary` o macOS não deixa a janela aparecer sobre uma app em ecrã
-/// inteiro; o `visibleOnAllWorkspaces` do Tauri só põe `CanJoinAllSpaces`.
+/// Without `FullScreenAuxiliary` macOS won't show the window over a fullscreen app;
+/// Tauri's `visibleOnAllWorkspaces` only sets `CanJoinAllSpaces`.
 pub fn float_over_fullscreen(w: &tauri::WebviewWindow) {
     let Ok(ptr) = w.ns_window() else { return };
     let win = unsafe { &*(ptr as *const NSWindow) };

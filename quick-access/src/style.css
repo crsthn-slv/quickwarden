@@ -10,7 +10,7 @@ html, body { margin: 0; height: 100%; background: transparent; overflow: hidden;
   background: var(--bg); border-radius: 12px; border: 1px solid var(--line); overflow: hidden; }
 #search { display: flex; align-items: center; gap: 8px; margin: 10px; }
 #folder { font-size: 12px; font-weight: 600; padding: 3px 7px; border-radius: 99px; background: var(--accent); color: #fff; flex: none; }
-/* anel de foco fixo no próprio input (nunca depende de :focus-visible) */
+/* focus ring fixed on the input itself (never depends on :focus-visible) */
 #q { flex: 1; min-width: 0; box-sizing: border-box; height: 42px; padding: 0 12px; border: 0; border-radius: 9px;
   background: var(--fill); outline: 2.5px solid var(--ring); outline-offset: 0; color: var(--fg); font-size: 16px; }
 #q::placeholder { color: var(--dim); }
@@ -31,7 +31,7 @@ html, body { margin: 0; height: 100%; background: transparent; overflow: hidden;
 .head b, .head small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .head small { color: var(--dim); font-size: 12px; }
 .empty { text-align: center; color: var(--dim); font-size: 13px; padding-top: 28px; }
-/* toast sobreposto: não ocupa espaço, a janela não muda de tamanho */
+/* overlaid toast: takes no space, the window never resizes */
 #toast { position: absolute; left: 50%; bottom: 52px; transform: translateX(-50%); max-width: calc(100% - 40px);
   box-sizing: border-box; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none;
   background: #1c1c1e; color: #fff; border: 1px solid rgba(255,255,255,.35); border-radius: 99px;

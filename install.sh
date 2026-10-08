@@ -1,5 +1,5 @@
 #!/bin/bash
-# Compila o Quick Access (Tauri), instala em /Applications e arranca no login.
+# Builds Quick Access (Tauri), installs to /Applications and starts it at login.
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -9,10 +9,10 @@ BINARY="$APP/Contents/MacOS/quick-access"
 BIN="$HOME/.local/bin"; PLIST="$HOME/Library/LaunchAgents/local.quick-access.plist"
 mkdir -p "$BIN" "$HOME/Library/LaunchAgents"
 
-# Identidade estável: mantém válida a ACL da Keychain do item Touch ID entre builds
-# (assinaturas ad-hoc mudam a cada build).
+# Stable identity: keeps the Touch ID item's Keychain ACL valid across builds
+# (ad-hoc signatures change on every build).
 if ! security find-identity -p codesigning | grep -q "$ID"; then
-  T=$(mktemp -d); trap 'rm -rf "$T"' EXIT  # a chave privada nunca fica em disco
+  T=$(mktemp -d); trap 'rm -rf "$T"' EXIT  # the private key never stays on disk
   cat > "$T/c.cnf" <<CNF
 [req]
 distinguished_name=dn
@@ -33,14 +33,14 @@ fi
 
 (cd quick-access/src-tauri && cargo tauri build --bundles app)
 
-# bootout antes do pkill: com KeepAlive o launchd relançaria a versão antiga.
+# bootout before pkill: with KeepAlive launchd would relaunch the old version.
 launchctl bootout "gui/$UID/local.quick-access" 2>/dev/null || true
 pkill -x quick-access || true
-# Não voltar a assinar depois de copiar.
+# Don't re-sign after copying.
 rm -rf "$APP"
 ditto "quick-access/src-tauri/target/release/bundle/macos/Quick Access.app" "$APP"
 
-# pinentry do rbw (caminho absoluto: o rbw não expande ~)
+# rbw pinentry (absolute path: rbw doesn't expand ~)
 cat > "$BIN/qa-pinentry" <<PE
 #!/bin/sh
 exec "$BINARY" --pinentry "\$@"
@@ -61,6 +61,6 @@ PL
 launchctl bootstrap "gui/$UID" "$PLIST"
 
 if ! security find-generic-password -s local.quick-access -a rbw-master-password >/dev/null 2>&1; then
-  echo "Para ativar Touch ID corre: \"$BINARY\" --enroll"
+  echo "To enable Touch ID run: \"$BINARY\" --enroll"
 fi
-echo "Instalado. ⇧⌘Espaço abre o Quick Access."
+echo "Installed. ⇧⌘Space opens Quick Access."

@@ -8,15 +8,15 @@ const { LogicalSize } = window.__TAURI__.dpi;
 const ROW = 38, MAX_ROWS = 9;
 
 const ACTIONS = [
-  { id: "user", label: "Copiar Nome Do Usuário", keys: "⌘C", ok: (i) => !!i.user, no: "Este item não tem nome de usuário" },
-  { id: "password", label: "Copiar Senha", keys: "⇧⌘C", ok: (i) => i.type !== "Note", no: "Este item não tem senha" },
-  { id: "totp", label: "Copiar Código De Uso Único", keys: "⌥⌘C", ok: () => true },
-  { id: "browser", label: "Abrir No Navegador", keys: "⌥↩", ok: (i) => !!i.uri, no: "Este item não tem endereço web" },
-  { id: "bitwarden", label: "Abrir No Bitwarden", keys: "⇧⌘O", ok: () => true },
+  { id: "user", label: "Copy Username", keys: "⌘C", ok: (i) => !!i.user, no: "This item has no username" },
+  { id: "password", label: "Copy Password", keys: "⇧⌘C", ok: (i) => i.type !== "Note", no: "This item has no password" },
+  { id: "totp", label: "Copy One-Time Code", keys: "⌥⌘C", ok: () => true },
+  { id: "browser", label: "Open In Browser", keys: "⌥↩", ok: (i) => !!i.uri, no: "This item has no web address" },
+  { id: "bitwarden", label: "Open In Bitwarden", keys: "⇧⌘O", ok: () => true },
 ];
-const DONE = { user: "Nome de usuário copiado", password: "Senha copiada", totp: "Código copiado" };
+const DONE = { user: "Username copied", password: "Password copied", totp: "Code copied" };
 
-// Um só objecto de estado; índices separados para lista e menu de acções.
+// Single state object; separate indices for the list and the action menu.
 const state = { items: [], query: "", folder: null, mode: "list", index: 0, actionIndex: 0, toast: null, locked: false, loading: true };
 let toastTimer;
 
@@ -49,10 +49,10 @@ function render() {
   const inActions = state.mode === "actions" && item;
 
   const q = $("q");
-  q.placeholder = state.loading ? "A carregar o cofre…" : "Pesquisar no Bitwarden";
+  q.placeholder = state.loading ? "Loading vault…" : "Search vault";
   $("folder").hidden = !state.folder;
   $("folder").textContent = state.folder ?? "";
-  $("toast").textContent = state.toast ?? ""; // sobreposto; nunca altera o tamanho da janela
+  $("toast").textContent = state.toast ?? ""; // overlaid; never changes the window size
 
   let html, rows;
   if (inActions) {
@@ -60,32 +60,32 @@ function render() {
     html = `<div class="head" aria-hidden="true">${icon(item.name)}<div><b>${esc(item.name)}</b><small>${esc(item.subtitle)}</small></div></div>` +
       acts.map((a, i) => `<div class="row act${i === state.actionIndex ? " on" : ""}" role="option" id="act-${i}" aria-selected="${i === state.actionIndex}"><span>${a.label}</span><kbd>${a.keys}</kbd></div>`).join("");
   } else if (state.loading) {
-    rows = 0; html = `<div class="empty">A carregar o cofre…</div>`;
+    rows = 0; html = `<div class="empty">Loading vault…</div>`;
   } else if (!list.length) {
-    rows = 0; html = `<div class="empty">${state.query ? `Nenhum resultado para “${esc(state.query)}”` : "Cofre vazio"}</div>`;
+    rows = 0; html = `<div class="empty">${state.query ? `No results for “${esc(state.query)}”` : "Vault is empty"}</div>`;
   } else {
     rows = Math.min(list.length, MAX_ROWS);
     html = list.map((it, i) => {
       const on = i === state.index;
       return `<div class="row${on ? " on" : ""}" role="option" id="opt-${i}" aria-selected="${on}" aria-label="${esc(it.subtitle ? `${it.name}, ${it.subtitle}` : it.name)}">${icon(it.name)}` +
         `<span class="t"><b>${esc(it.name)}</b>${it.subtitle ? `<span class="s">- ${esc(it.subtitle)}</span>` : ""}</span>` +
-        (on && (it.uri || ACTIONS[1].ok(it)) ? `<span class="hint">${it.uri ? "Abrir no navegador" : "Copiar senha"}</span>` : "") + `</div>`;
+        (on && (it.uri || ACTIONS[1].ok(it)) ? `<span class="hint">${it.uri ? "Open in browser" : "Copy password"}</span>` : "") + `</div>`;
     }).join("");
   }
   $("body").innerHTML = html;
-  $("body").setAttribute("aria-label", inActions ? `Ações para ${item.name}` : "Itens do cofre");
+  $("body").setAttribute("aria-label", inActions ? `Actions for ${item.name}` : "Vault items");
   const on = $("body").querySelector(".on");
   if (on) q.setAttribute("aria-activedescendant", on.id); else q.removeAttribute("aria-activedescendant");
   on?.scrollIntoView({ block: "nearest", behavior: "auto" });
 
-  // barra: só as acções que o item seleccionado suporta (mesmo predicado do menu)
+  // bar: only the actions the selected item supports (same predicate as the menu)
   const hint = (k, t) => `<span><kbd>${k}</kbd>${t}</span>`;
   $("bar").innerHTML = inActions
-    ? hint("↩", "Executar") + hint("⎋", "Voltar")
-    : (item ? ACTIONS.filter((a) => (a.id === "user" || a.id === "password") && a.ok(item)).map((a) => hint(a.keys, a.label)).join("") + hint("→", "Mais ações") : "") +
-      (folders().length ? `<span class="sp"></span>${hint("⌘1-9", "Colecções")}` : "");
+    ? hint("↩", "Run") + hint("⎋", "Back")
+    : (item ? ACTIONS.filter((a) => (a.id === "user" || a.id === "password") && a.ok(item)).map((a) => hint(a.keys, a.label)).join("") + hint("→", "More actions") : "") +
+      (folders().length ? `<span class="sp"></span>${hint("⌘1-9", "Folders")}` : "");
 
-  // altura = pesquisa 62 + corpo + barra 40 (como o painel Swift)
+  // height = search 62 + body + bar 40 (like the Swift panel)
   const body = inActions ? Math.max(1, rows) * ROW + 62 : rows ? rows * ROW + 10 : 90;
   getCurrentWindow().setSize(new LogicalSize(700, 62 + body + 40));
 }
@@ -109,7 +109,7 @@ async function show() {
 
 const hide = () => invoke("hide");
 
-// hideMs: sucesso, esconde o painel; sem hideMs (erro) o painel fica e o aviso desaparece sozinho
+// hideMs: success, hides the panel; without hideMs (error) the panel stays and the toast fades on its own
 function flash(msg, hideMs) {
   clearTimeout(toastTimer);
   Object.assign(state, { toast: msg, locked: !!hideMs });

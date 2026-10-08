@@ -1,4 +1,4 @@
-// Quick Access: painel Tauri sobre o rbw. Segredos nunca são devolvidos ao JS.
+// Quick Access: Tauri panel on top of rbw. Secrets are never returned to JS.
 mod macos;
 mod pinentry;
 
@@ -25,18 +25,18 @@ struct Item {
 #[derive(Default)]
 struct App {
     items: Mutex<Vec<Item>>,
-    unlocking: AtomicBool, // enquanto o pinentry está aberto, o blur não fecha o painel
+    unlocking: AtomicBool, // while the pinentry is open, blur does not close the panel
 }
 
-// Corre o rbw sem shell; devolve stdout sem espaços nas pontas.
+// Runs rbw without a shell; returns stdout trimmed.
 fn rbw(args: &[&str]) -> Option<String> {
     let o = Command::new(RBW).args(args).output().ok()?;
     o.status.success().then(|| String::from_utf8_lossy(&o.stdout).trim().to_string())
 }
 
 fn find(app: &App, id: &str) -> Result<Item, String> {
-    let items = app.items.lock().map_err(|_| "Estado inválido")?;
-    items.iter().find(|i| i.id == id).cloned().ok_or_else(|| "Item não encontrado".into())
+    let items = app.items.lock().map_err(|_| "Invalid state")?;
+    items.iter().find(|i| i.id == id).cloned().ok_or_else(|| "Item not found".into())
 }
 
 #[tauri::command]
@@ -44,13 +44,13 @@ async fn list_items(app: State<'_, App>) -> Result<Vec<Item>, String> {
     if rbw(&["unlocked"]).is_none() {
         app.unlocking.store(true, Ordering::SeqCst);
         let _ = Command::new(RBW).arg("unlock").output();
-        // o foco volta ao painel um instante depois do pinentry fechar
+        // focus returns to the panel a moment after the pinentry closes
         std::thread::sleep(std::time::Duration::from_millis(400));
         app.unlocking.store(false, Ordering::SeqCst);
     }
-    let raw = rbw(&["list", "--raw"]).ok_or("Não foi possível ler o cofre")?;
-    let items: Vec<Item> = serde_json::from_str(&raw).map_err(|_| "Resposta do rbw inválida")?;
-    *app.items.lock().map_err(|_| "Estado inválido")? = items.clone();
+    let raw = rbw(&["list", "--raw"]).ok_or("Could not read the vault")?;
+    let items: Vec<Item> = serde_json::from_str(&raw).map_err(|_| "Invalid response from rbw")?;
+    *app.items.lock().map_err(|_| "Invalid state")? = items.clone();
     Ok(items)
 }
 
@@ -58,10 +58,10 @@ async fn list_items(app: State<'_, App>) -> Result<Vec<Item>, String> {
 async fn copy(app: State<'_, App>, id: String, field: String) -> Result<(), String> {
     let item = find(&app, &id)?;
     let value = match field.as_str() {
-        "user" => item.user.filter(|u| !u.is_empty()).ok_or("Este item não tem nome de usuário")?,
-        "password" => rbw(&["get", &id]).filter(|v| !v.is_empty()).ok_or("Não foi possível obter a senha")?,
-        "totp" => rbw(&["code", &id]).filter(|v| !v.is_empty()).ok_or("Este item não tem código de uso único")?,
-        _ => return Err("Campo inválido".into()),
+        "user" => item.user.filter(|u| !u.is_empty()).ok_or("This item has no username")?,
+        "password" => rbw(&["get", &id]).filter(|v| !v.is_empty()).ok_or("Could not get the password")?,
+        "totp" => rbw(&["code", &id]).filter(|v| !v.is_empty()).ok_or("This item has no one-time code")?,
+        _ => return Err("Invalid field".into()),
     };
     macos::copy_concealed(&value);
     Ok(())
@@ -75,14 +75,14 @@ fn open_url(app: State<'_, App>, id: String) -> Result<(), String> {
         .unwrap_or_default()
         .into_iter()
         .find(|u| u.starts_with("http://") || u.starts_with("https://"))
-        .ok_or("Este item não tem URL http(s)")?;
-    Command::new("open").arg(url).spawn().map_err(|_| "Não foi possível abrir o navegador")?;
+        .ok_or("This item has no http(s) URL")?;
+    Command::new("open").arg(url).spawn().map_err(|_| "Could not open the browser")?;
     Ok(())
 }
 
 #[tauri::command]
 fn open_bitwarden() -> Result<(), String> {
-    Command::new("open").args(["-b", "com.bitwarden.desktop"]).spawn().map_err(|_| "Não foi possível abrir o Bitwarden")?;
+    Command::new("open").args(["-b", "com.bitwarden.desktop"]).spawn().map_err(|_| "Could not open Bitwarden")?;
     Ok(())
 }
 
@@ -90,7 +90,7 @@ pub(crate) fn hide_panel(app: &AppHandle) {
     if let Some(w) = app.get_webview_window("main") {
         let _ = w.hide();
     }
-    let _ = app.hide(); // devolve o foco à app anterior
+    let _ = app.hide(); // returns focus to the previous app
 }
 
 #[tauri::command]
@@ -107,7 +107,7 @@ fn show_panel(app: &AppHandle, w: &WebviewWindow) {
 }
 
 fn main() {
-    // O mesmo binário faz de pinentry do rbw (ver pinentry.rs).
+    // The same binary doubles as rbw's pinentry (see pinentry.rs).
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.first().map(String::as_str) {
         Some("--pinentry") => {
@@ -119,7 +119,7 @@ fn main() {
                 eprintln!("{e}");
                 std::process::exit(1);
             }
-            println!("guardada; o rbw unlock passa a pedir Touch ID");
+            println!("saved; rbw unlock will now ask for Touch ID");
             return;
         }
         _ => {}
@@ -130,7 +130,7 @@ fn main() {
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_shortcut(toggle)
-                .expect("atalho inválido")
+                .expect("invalid shortcut")
                 .with_handler(move |app, _, ev| {
                     if ev.state() != ShortcutState::Pressed {
                         return;
@@ -162,5 +162,5 @@ fn main() {
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("erro a arrancar o Quick Access");
+        .expect("error starting Quick Access");
 }

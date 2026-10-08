@@ -1,9 +1,9 @@
-// Pontuação da pesquisa do Quick Access (porta de quick-access-search.ts).
-// Dobrar acentos e maiúsculas, e exigir que *todos* os termos apareçam.
+// Quick Access search scoring (port of quick-access-search.ts).
+// Fold accents and case, and require that *all* terms match.
 
 // Item: { name, subtitle?, folder?, favorite? }
 
-// Sem pesquisa, favoritos primeiro (só se o rbw trouxer o campo), depois alfabético.
+// With no query, favorites first (only if rbw provides the field), then alphabetical.
 function favoritesFirst(items) {
   return [...items].sort((a, b) => {
     if (!!a.favorite !== !!b.favorite) return a.favorite ? -1 : 1;
@@ -49,6 +49,6 @@ export function searchItems(items, query) {
     .map((s) => s.item);
 }
 
-// Filtro de colecção (⌘1–9); sem pasta devolve tudo.
+// Folder filter (⌘1–9); with no folder returns everything.
 export const filterFolder = (items, folder) =>
   folder ? items.filter((i) => i.folder === folder) : items;
