@@ -1,0 +1,45 @@
+:root { --accent: #0a64d6; --ring: #4da3ff; --bg: #212121; --bar: #2b2b2b; --fg: #fff; --dim: rgba(255,255,255,.6);
+  --line: rgba(255,255,255,.12); --fill: rgba(255,255,255,.06); --kbd: rgba(255,255,255,.16); }
+@media (prefers-color-scheme: light) {
+  :root { --ring: #0a64d6; --bg: #f6f6f6; --bar: #e8e8e8; --fg: #1c1c1e; --dim: rgba(0,0,0,.62);
+    --line: rgba(0,0,0,.14); --fill: rgba(0,0,0,.05); --kbd: rgba(0,0,0,.1); }
+}
+html, body { margin: 0; height: 100%; background: transparent; overflow: hidden;
+  font: 14px -apple-system, BlinkMacSystemFont, sans-serif; color: var(--fg); user-select: none; }
+#panel { position: relative; height: 100%; box-sizing: border-box; display: flex; flex-direction: column;
+  background: var(--bg); border-radius: 12px; border: 1px solid var(--line); overflow: hidden; }
+#search { display: flex; align-items: center; gap: 8px; margin: 10px; }
+#folder { font-size: 12px; font-weight: 600; padding: 3px 7px; border-radius: 99px; background: var(--accent); color: #fff; flex: none; }
+/* anel de foco fixo no próprio input (nunca depende de :focus-visible) */
+#q { flex: 1; min-width: 0; box-sizing: border-box; height: 42px; padding: 0 12px; border: 0; border-radius: 9px;
+  background: var(--fill); outline: 2.5px solid var(--ring); outline-offset: 0; color: var(--fg); font-size: 16px; }
+#q::placeholder { color: var(--dim); }
+#body { flex: 1; overflow-x: hidden; overflow-y: auto; border-top: 1px solid var(--line); padding: 4px 6px; }
+.row { display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 10px; border-radius: 7px; white-space: nowrap; min-width: 0; }
+.row.on { background: var(--accent); color: #fff; }
+.row .t { overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+.row b { font-weight: 600; }
+.row .s { color: var(--dim); margin-left: 6px; font-size: 13px; }
+.row.on .s { color: rgba(255,255,255,.88); }
+.row .hint { font-size: 12px; font-weight: 600; flex: none; }
+.ico { width: 26px; height: 26px; border-radius: 6px; display: grid; place-items: center; font-size: 11px; font-weight: 700; flex: none; color: #fff; }
+.act { justify-content: space-between; padding: 0 14px; }
+.act kbd { font: 12px inherit; color: var(--dim); flex: none; }
+.row.on kbd { color: rgba(255,255,255,.88); }
+.head { display: flex; gap: 10px; align-items: center; padding: 8px 6px; border-bottom: 1px solid var(--line); margin-bottom: 4px; min-width: 0; }
+.head > div { min-width: 0; flex: 1; }
+.head b, .head small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.head small { color: var(--dim); font-size: 12px; }
+.empty { text-align: center; color: var(--dim); font-size: 13px; padding-top: 28px; }
+/* toast sobreposto: não ocupa espaço, a janela não muda de tamanho */
+#toast { position: absolute; left: 50%; bottom: 52px; transform: translateX(-50%); max-width: calc(100% - 40px);
+  box-sizing: border-box; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none;
+  background: #1c1c1e; color: #fff; border: 1px solid rgba(255,255,255,.35); border-radius: 99px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.4); font-weight: 600; font-size: 13px; padding: 8px 16px; }
+#toast:empty { display: none; }
+#bar { flex: none; height: 40px; background: var(--bar); display: flex; align-items: center; gap: 16px; padding: 0 14px;
+  font-size: 12px; white-space: nowrap; overflow: hidden; }
+#bar kbd { background: var(--kbd); border-radius: 4px; padding: 2px 5px; font: 600 11px inherit; margin-right: 4px; }
+#bar .sp { flex: 1; }
+[hidden] { display: none !important; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
