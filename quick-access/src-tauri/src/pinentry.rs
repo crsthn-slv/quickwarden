@@ -33,7 +33,7 @@ pub fn enroll() -> Result<(), String> {
         let mut stdin = child.stdin.take().expect("stdin piped");
         stdin
             .write_all(
-                b"SETTITLE Quick Access\nSETDESC Bitwarden master password, to unlock with Touch ID\nSETPROMPT Master Password\nSETREPEAT Repeat\nSETREPEATERROR Passwords do not match\nGETPIN\n",
+                b"SETTITLE Quickwarden\nSETDESC Bitwarden master password, to unlock with Touch ID\nSETPROMPT Master Password\nSETREPEAT Repeat\nSETREPEATERROR Passwords do not match\nGETPIN\n",
             )
             .map_err(|e| e.to_string())?;
     }

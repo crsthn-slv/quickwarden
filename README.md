@@ -30,7 +30,7 @@ The app lives in [`quick-access/`](quick-access/). Install script is [`install.s
 
 ```sh
 ./install.sh
-"/Applications/Quick Access.app/Contents/MacOS/quick-access" --enroll
+"/Applications/Quickwarden.app/Contents/MacOS/quick-access" --enroll
 ```
 
 | Step | What it does |

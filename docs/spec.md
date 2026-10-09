@@ -1,4 +1,4 @@
-# Quick Access spec — port from the Swift prototype to the fork
+# Quickwarden spec — port from the Swift prototype to the fork
 
 Source: 1Password 8 documentation (read 10 Sep 2026) + what is already implemented and tested
 in the `QuickAccess.swift` prototype. This file is what survives from the prototype. The rest (rbw, Swift panel,
