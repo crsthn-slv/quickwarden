@@ -104,10 +104,6 @@ This also covers the per-item master password re-prompt from `rbw`.
 
 Design docs: [`docs/`](docs/) (spec, research, fork-vs-new-app decision).
 
-## History
-
-Replaces an Electron fork of `bitwarden/clients` and a Swift prototype. The fork had 10 commits, kept locally as a git bundle (base `bitwarden/clients@037a68b`), not published. The shortcut and search spec survives in [`docs/spec.md`](docs/spec.md).
-
 ## License
 
 [MIT](LICENSE)
