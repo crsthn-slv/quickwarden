@@ -1,4 +1,4 @@
-// Quick Access: Tauri panel on top of rbw. Secrets are never returned to JS.
+// Quickwarden: Tauri panel on top of rbw. Secrets are never returned to JS.
 mod macos;
 mod pinentry;
 
@@ -107,6 +107,9 @@ fn show_panel(app: &AppHandle, w: &WebviewWindow) {
 }
 
 fn main() {
+    // launchd's PATH lacks Homebrew; rbw spawns rbw-agent via PATH.
+    let path = std::env::var("PATH").unwrap_or_default();
+    std::env::set_var("PATH", format!("/opt/homebrew/bin:{path}"));
     // The same binary doubles as rbw's pinentry (see pinentry.rs).
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.first().map(String::as_str) {
@@ -162,5 +165,5 @@ fn main() {
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("error starting Quick Access");
+        .expect("error starting Quickwarden");
 }
