@@ -40,11 +40,15 @@ fn find(app: &App, id: &str) -> Result<Item, String> {
 }
 
 #[tauri::command]
-async fn list_items(app: State<'_, App>) -> Result<Vec<Item>, String> {
+async fn list_items(handle: AppHandle, app: State<'_, App>) -> Result<Vec<Item>, String> {
     if rbw(&["unlocked"]).is_none() {
         app.unlocking.store(true, Ordering::SeqCst);
         let _ = Command::new(RBW).arg("unlock").output();
-        // focus returns to the panel a moment after the pinentry closes
+        // Touch ID activates the pinentry process; macOS does not hand activation back to us
+        let _ = handle.show();
+        if let Some(w) = handle.get_webview_window("main") {
+            let _ = w.set_focus();
+        }
         std::thread::sleep(std::time::Duration::from_millis(400));
         app.unlocking.store(false, Ordering::SeqCst);
     }
